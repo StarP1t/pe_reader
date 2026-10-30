@@ -1,6 +1,7 @@
 // By StarP1t
 // м╥нд╪Ч
 #include <Windows.h>
+#include <cstring>
 #include "PE_reader.h"
 
 /*

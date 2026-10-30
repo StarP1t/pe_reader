@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="PE_reader/PE_reader.vcxproj" />
+  <Project Path="PE_reader/PE_reader.vcxproj" Id="8e2a8b81-bf48-4712-9ef4-318868cf369b" />
 </Solution>
