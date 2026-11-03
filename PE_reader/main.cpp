@@ -1,25 +1,22 @@
 // By StarP1t
 #include "PE_reader.h"
 
-int main()
+int main(int argc, char* argv[])
 {
-	print_startup_info();
+	int err_stat = 0;
 
-	std::ifstream file;
-	if (file_open(file))
-		return FILE_OPEN_FAIL_ERR;
+	// TODO 完整参数检查
+	if (argc < 2) // 无参默认解析头
+		err_stat = Parse_Header();
+	else if (argc < 3) // 一参
+	{
+		std::string arg = argv[1];
 
-	std::vector<uint8_t> buffer;
-	int status = file_load(file, buffer);
-	if (status)
-		return status;
-	file.close();
+		if (arg == "-c") // check
+			err_stat = PE_Check();
+		else if (arg == "-h") // help
+			print_help_info();
+	}
 
-	std::cout << "文件类型：";
-	if (is_PE_file(buffer))
-		std::cout << "PE文件" << std::endl;
-	else
-		std::cout << "非PE文件" << std::endl;
-
-	return 0;
+	return err_stat;
 }

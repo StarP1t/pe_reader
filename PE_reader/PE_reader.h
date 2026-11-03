@@ -9,6 +9,7 @@
 #define FILE_OPEN_FAIL_ERR -1
 #define FILE_EMPTY_ERR -2
 #define FILE_READ_FAIL_ERR -3
+#define FILE_NOT_PE -4
 
 // 头文件
 #include <cstdint>
@@ -16,11 +17,9 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
+#include <string>
 
 // 函数声明
-void print_startup_info();
-
-int file_open(std::ifstream& file);
-int file_load(std::ifstream& file, std::vector<uint8_t>& buffer);
-
-bool is_PE_file(std::vector<uint8_t>& buffer);
+void print_help_info();
+int PE_Check();
+int Parse_Header();

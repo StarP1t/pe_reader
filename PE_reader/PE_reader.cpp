@@ -4,11 +4,29 @@
 #include <cstring>
 #include "PE_reader.h"
 
+//
+// 实现函数
+//
+
+/*
+函数名称：print_help_info
+说明：打印帮助信息
+*/
+void print_help_info()
+{
+	std::cout << std::endl;
+	std::cout << "用法：无参数，[-h] 或 [-c]" << "\n\n";
+
+	std::cout << "选项：" << std::endl;
+	std::cout << "-h : 打印帮助信息" << std::endl;
+	std::cout << "-c : 检查是否是pe文件" << std::endl;
+}
+
 /*
 函数名称：print_startup_info
 说明：打印文件名形式信息提示
 */
-void print_startup_info()
+void print_filename_help()
 {
 	std::cout << "文件名形式:" << std::endl;
 	std::cout << std::setw(4) << ' ' << std::left << std::setw(26) << "a.txt";
@@ -85,6 +103,60 @@ int file_load(std::ifstream& file, std::vector<uint8_t>& buffer)
 }
 
 /*
+函数名称：get_file
+输入：std::vector<uint8_t>& buffer
+输出：int status
+说明：获取文件并加载到缓冲区
+*/
+int get_file(std::vector<uint8_t>& buffer)
+{
+	std::ifstream file;
+	if (file_open(file))
+		return FILE_OPEN_FAIL_ERR;
+
+	int status = file_load(file, buffer);
+	if (status)
+		return status;
+	file.close();
+
+	return 0;
+}
+
+/*
+函数名称：parse_DOS_header
+输入：std::vector<uint8_t>& buffer
+输出：int (status)
+说明：解析并打印dos头重要成员
+*/
+int parse_DOS_header(std::vector<uint8_t>& buffer)
+{
+	const int prtw_name = 20; // 名称最大宽度
+	const int prtw_val = 8; // 值最大宽度
+
+	IMAGE_DOS_HEADER dosH;
+	std::memcpy(&dosH, buffer.data(), sizeof(IMAGE_DOS_HEADER));
+
+	if (dosH.e_magic != 0x5A4D)
+	{
+		std::cout << "非PE文件" << std::endl;
+		return FILE_NOT_PE;
+	}
+
+	// 打印
+	std::cout << std::endl;
+	std::cout << std::setw(prtw_name) << std::left << "参数名称";
+	std::cout << std::setw(prtw_val)  << "原始值" << std::endl;
+	
+	std::cout << std::setw(prtw_name) << "Magic number" << std::hex
+			  << std::setw(prtw_val) << dosH.e_magic << std::endl;
+	std::cout << std::setw(prtw_name) << "Addr of NT header" << std::hex
+			  << std::setw(prtw_val) << dosH.e_lfanew << std::endl;
+	std::cout << std::endl;
+
+	return 0;
+}
+
+/*
 函数名称：is_PE_file
 输入：std::vector<uint8_t>& buffer
 输出：bool
@@ -96,4 +168,45 @@ bool is_PE_file(std::vector<uint8_t>& buffer)
 	std::memcpy(&dosH, buffer.data(), sizeof(IMAGE_DOS_HEADER));
 
 	return dosH.e_magic == 0x5A4D;
+}
+
+//
+// 综合调用函数
+//
+
+/*
+函数名称：PE_check
+输出：int (status)
+说明：检查输入文件是否是PE文件
+*/
+int PE_Check()
+{
+	std::vector<uint8_t> buffer;
+
+	print_filename_help();
+	get_file(buffer);
+
+	std::cout << "文件类型：";
+	if (is_PE_file(buffer))
+		std::cout << "PE文件" << std::endl;
+	else
+		std::cout << "非PE文件" << std::endl;
+
+	return 0;
+}
+
+/*
+函数名称：parse_header
+输出：int (status)
+说明：TODO 解析PE头
+*/
+int Parse_Header()
+{
+	std::vector<uint8_t> buffer;
+
+	print_filename_help();
+	get_file(buffer);
+	parse_DOS_header(buffer);
+
+	return 0;
 }
