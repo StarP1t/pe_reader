@@ -1,7 +1,9 @@
 // By StarP1t
 // 头文件
-#include <Windows.h>
 #include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <vector>
 #include "PE_reader.h"
 
 //
@@ -34,7 +36,7 @@ void print_filename_help()
 	std::cout << std::setw(4) << ' ' << std::setw(26) << "..\\data\\b.dat";
 	std::cout << ": 相对路径形式" << std::endl;
 	std::cout << std::setw(4) << ' ' << std::setw(26) << "C:\\Windows\\System32\\c.dat";
-	std::cout << ": 绝对相对路径形式" << std::endl;
+	std::cout << ": 绝对路径形式" << std::endl;
 }
 
 /*
@@ -45,17 +47,17 @@ void print_filename_help()
 */
 int file_open(std::ifstream& file)
 {
-	char pwd[NAME_BUFF_SIZE] {0};
-	std::cout << "请输入文件名(无空白字符/引号): ";
-	std::cin >> pwd;
-	if (!std::cin)
+	std::string path;
+	std::cout << "请输入文件名(两侧无引号): ";
+	std::getline(std::cin, path);
+	if (path.empty())
 		return FILE_OPEN_FAIL_ERR;
 	std::cout << std::endl;
 
-	file.open(pwd, std::ios::binary);
+	file.open(path, std::ios::binary);
 	if (!file)
 	{
-		std::cerr << "文件\"" << pwd << "\"打开失败!" << std::endl;
+		std::cerr << "文件\"" << path << "\"打开失败!" << std::endl;
 		file.clear();
 		return FILE_OPEN_FAIL_ERR;
 	}
@@ -133,10 +135,16 @@ int parse_DOS_header(std::vector<uint8_t>& buffer)
 	const int prtw_name = 20; // 名称最大宽度
 	const int prtw_val = 8; // 值最大宽度
 
-	IMAGE_DOS_HEADER dosH;
-	std::memcpy(&dosH, buffer.data(), sizeof(IMAGE_DOS_HEADER));
+	DOS_HEADER dosH;
 
-	if (dosH.e_magic != 0x5A4D)
+	if (buffer.size() < sizeof(DOS_HEADER))
+	{
+		std::cerr << "文件太小，非PE文件\n";
+		return FILE_NOT_PE;
+	}
+	std::memcpy(&dosH, buffer.data(), sizeof(DOS_HEADER));
+
+	if (dosH.e_magic != DOS_SIGNATURE)
 	{
 		std::cout << "非PE文件" << std::endl;
 		return FILE_NOT_PE;
@@ -164,10 +172,27 @@ int parse_DOS_header(std::vector<uint8_t>& buffer)
 */
 bool is_PE_file(std::vector<uint8_t>& buffer)
 {
-	IMAGE_DOS_HEADER dosH;
-	std::memcpy(&dosH, buffer.data(), sizeof(IMAGE_DOS_HEADER));
+	DOS_HEADER dosH;
 
-	return dosH.e_magic == 0x5A4D;
+	if (buffer.size() < sizeof(DOS_HEADER)) // 文件太小
+		return false;
+
+	std::memcpy(&dosH, buffer.data(), sizeof(DOS_HEADER));
+	
+	if (dosH.e_magic != DOS_SIGNATURE) // 非MZ头
+		return false;
+
+	if (dosH.e_lfanew < 0) // 非法NT头偏移
+		return false;
+
+	size_t offset = static_cast<size_t>(dosH.e_lfanew);
+	if (offset > buffer.size() - sizeof(uint32_t)) // 超出文件长度
+		return false;
+	
+	uint32_t sign = 0;
+	memcpy(&sign, buffer.data() + offset, sizeof(uint32_t));
+
+	return sign == NT_SIGNATURE;
 }
 
 //
@@ -182,15 +207,21 @@ bool is_PE_file(std::vector<uint8_t>& buffer)
 int PE_Check()
 {
 	std::vector<uint8_t> buffer;
+	int err_stat;
 
 	print_filename_help();
-	get_file(buffer);
+
+	err_stat = get_file(buffer);
+	if (err_stat)
+		return err_stat;
 
 	std::cout << "文件类型：";
-	if (is_PE_file(buffer))
-		std::cout << "PE文件" << std::endl;
-	else
+	if (!is_PE_file(buffer))
+	{
 		std::cout << "非PE文件" << std::endl;
+		return FILE_NOT_PE;
+	}
+	std::cout << "PE文件" << std::endl;
 
 	return 0;
 }
@@ -203,10 +234,17 @@ int PE_Check()
 int Parse_Header()
 {
 	std::vector<uint8_t> buffer;
+	int err_stat = 0;
 
 	print_filename_help();
-	get_file(buffer);
-	parse_DOS_header(buffer);
+
+	err_stat = get_file(buffer);
+	if (err_stat)
+		return err_stat;
+
+	err_stat = parse_DOS_header(buffer);
+	if (err_stat)
+		return err_stat;
 
 	return 0;
 }
